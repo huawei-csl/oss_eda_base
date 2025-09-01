@@ -13,13 +13,15 @@ When building from another repository that vendors this repo (e.g., monorepo usi
 
 ## Build locally
 
-From the repository root:
+From the repository root (BuildKit required):
 
 - Monorepo (build from monorepo root):
-  `docker build -f ext/oss_eda_base/Dockerfile --build-arg NPROC=$(nproc) -t oss-eda-base:latest .`
+  `DOCKER_BUILDKIT=1 docker build -f ext/oss_eda_base/Dockerfile --build-arg NPROC=$(nproc) --build-arg OEDA_SCRIPTS_REV=$(git -C ext/oss_eda_base/ext/oss_eda_flow_scripts rev-parse HEAD || date +%s) -t oss-eda-base:latest .`
 
 - Standalone `oss_eda_base` repo:
-  `docker build -f Dockerfile --build-arg NPROC=$(nproc) -t oss-eda-base:latest .`
+  `DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg NPROC=$(nproc) --build-arg OEDA_SCRIPTS_REV=$(git -C ext/oss_eda_flow_scripts rev-parse HEAD || date +%s) -t oss-eda-base:latest .`
+
+The `OEDA_SCRIPTS_REV` build-arg ties the cache to the submodule revision so the step that imports `oss_eda_flow_scripts` re-runs when the scripts change.
 
 The Dockerfile automatically looks for the submodule at `ext/oss_eda_base/ext/oss_eda_flow_scripts` (when building from a monorepo root) or `ext/oss_eda_flow_scripts` (when building this repo directly). If not found, the build fails with a clear error explaining how to initialize submodules.
 
