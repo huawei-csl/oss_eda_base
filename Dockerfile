@@ -137,27 +137,26 @@ WORKDIR /app
 # 2) Building from a monorepo root using -f:  ext/oss_eda_base/ext/oss_eda_flow_scripts
 # If the submodule is missing, fail with a clear message.
 #########################################################
-# syntax=docker/dockerfile:1.4
-RUN --mount=type=bind,source=.,target=/context bash -lc '
-  set -euo pipefail
-  src=""
-  if [[ -d /context/ext/oss_eda_base/ext/oss_eda_flow_scripts ]]; then
-    src=/context/ext/oss_eda_base/ext/oss_eda_flow_scripts
-  elif [[ -d /context/ext/oss_eda_flow_scripts ]]; then
-    src=/context/ext/oss_eda_flow_scripts
-  else
-    echo "\nERROR: oss_eda_flow_scripts submodule not found in build context.\n" >&2
-    echo "Expected at one of:" >&2
-    echo "  - ext/oss_eda_base/ext/oss_eda_flow_scripts (when building from a monorepo root)" >&2
-    echo "  - ext/oss_eda_flow_scripts (when building this repo directly)" >&2
-    echo "\nFix: Ensure git submodules are initialized recursively before building:" >&2
-    echo "  git submodule update --init --recursive" >&2
-    echo "\nIf building from another repository, run the command at that repo root." >&2
-    exit 1
-  fi
-  mkdir -p /app/oss_eda_flow_scripts
-  cp -a "$src"/. /app/oss_eda_flow_scripts/
-'
+RUN --mount=type=bind,source=.,target=/context bash -lc <<'EOS'
+set -euo pipefail
+src=""
+if [[ -d /context/ext/oss_eda_base/ext/oss_eda_flow_scripts ]]; then
+  src=/context/ext/oss_eda_base/ext/oss_eda_flow_scripts
+elif [[ -d /context/ext/oss_eda_flow_scripts ]]; then
+  src=/context/ext/oss_eda_flow_scripts
+else
+  echo "\nERROR: oss_eda_flow_scripts submodule not found in build context.\n" >&2
+  echo "Expected at one of:" >&2
+  echo "  - ext/oss_eda_base/ext/oss_eda_flow_scripts (when building from a monorepo root)" >&2
+  echo "  - ext/oss_eda_flow_scripts (when building this repo directly)" >&2
+  echo "\nFix: Ensure git submodules are initialized recursively before building:" >&2
+  echo "  git submodule update --init --recursive" >&2
+  echo "\nIf building from another repository, run the command at that repo root." >&2
+  exit 1
+fi
+mkdir -p /app/oss_eda_flow_scripts
+cp -a "$src"/. /app/oss_eda_flow_scripts/
+EOS
 
 LABEL org.opencontainers.image.title="oss-eda-base" \
       org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
