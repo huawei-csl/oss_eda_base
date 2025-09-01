@@ -1,0 +1,3 @@
+[submodule "ext/oss_eda_flow_scripts"]
+	path = ext/oss_eda_flow_scripts
+	url = git@github.com:MaxenceBouvier/_oss_eda_flow_scripts.git

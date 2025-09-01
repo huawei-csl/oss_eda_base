@@ -2,31 +2,26 @@
 
 Shared Docker base image providing common EDA toolchain and Python env for DGFE, Flowy, and related projects. It now bakes `oss_eda_flow_scripts` into the image so overlays don’t need to vendor it.
 
+## Submodule Setup
+
+This repo embeds the flow scripts as a Git submodule at `ext/oss_eda_flow_scripts`.
+
+- Add (first-time): `git submodule add https://github.com/<org>/oss_eda_flow_scripts.git ext/oss_eda_flow_scripts`
+- Initialize/update: `git submodule update --init --recursive`
+
+When building from another repository that vendors this repo (e.g., monorepo using `-f ext/oss_eda_base/Dockerfile`), ensure you run the init command at the other repository’s root so the submodule is populated in the build context.
+
 ## Build locally
 
 From the repository root:
 
-Monorepo (this repo contains `ext/oss_eda_flow_scripts/`):
+- Monorepo (build from monorepo root):
+  `docker build -f ext/oss_eda_base/Dockerfile --build-arg NPROC=$(nproc) -t oss-eda-base:latest .`
 
-```
-docker build \
-  -f ext/oss_eda_base/Dockerfile \
-  --build-arg NPROC=$(nproc) \
-  --build-arg OEDA_PATH=ext/oss_eda_flow_scripts \
-  -t oss-eda-base:latest \
-  .
-```
+- Standalone `oss_eda_base` repo:
+  `docker build -f Dockerfile --build-arg NPROC=$(nproc) -t oss-eda-base:latest .`
 
-Standalone `oss_eda_base` repo (with `oss_eda_flow_scripts/` as submodule at repo root):
-
-```
-docker build \
-  -f Dockerfile \
-  --build-arg NPROC=$(nproc) \
-  --build-arg OEDA_PATH=oss_eda_flow_scripts \
-  -t oss-eda-base:latest \
-  .
-```
+The Dockerfile automatically looks for the submodule at `ext/oss_eda_base/ext/oss_eda_flow_scripts` (when building from a monorepo root) or `ext/oss_eda_flow_scripts` (when building this repo directly). If not found, the build fails with a clear error explaining how to initialize submodules.
 
 ## Use as a base
 
@@ -49,3 +44,9 @@ docker build \
   -t <overlay-tag> \
   .
 ```
+
+## Troubleshooting
+
+- Build error about missing `oss_eda_flow_scripts`:
+  Ensure submodules are initialized: `git submodule update --init --recursive`
+  If building from another repo, run the command at that repo’s root.
