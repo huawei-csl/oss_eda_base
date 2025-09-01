@@ -1,0 +1,1 @@
+# Intentionally minimal. Add project requirements at top-level repo to preinstall.

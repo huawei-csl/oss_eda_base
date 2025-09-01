@@ -1,0 +1,150 @@
+# OSS EDA Base image
+# Shared base for DGFE and Flowy (and other projects)
+
+FROM ubuntu:24.04 AS base
+SHELL ["/bin/bash", "-lc"]
+
+# Base environment
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_ROOT_USER_ACTION=ignore
+
+# System dependencies (no recommends)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl wget git unzip zip \
+    build-essential g++ make cmake \
+    autoconf automake libtool pkg-config \
+    flex bison help2man \
+    numactl libgoogle-perftools-dev \
+    libfl2 libfl-dev \
+    zlib1g-dev libreadline-dev libffi-dev \
+    graphviz xdot tcl-dev gawk \
+    libboost-system-dev libboost-filesystem-dev libboost-python-dev \
+    swig perl python3 sudo \
+    locales \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/morty /opt/sv2v /proj /prog
+
+# Build parallelism
+ARG NPROC=8
+
+#########################################################
+# Python (via uv) and basic packages
+#########################################################
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && install -m 0755 /root/.local/bin/uv /usr/local/bin/uv
+ENV PATH=/usr/local/bin:$PATH
+WORKDIR /prog
+RUN uv venv -n pyenv_eda --python=3.13 \
+ && echo 'export PATH="/prog/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv_eda.sh
+ENV PATH=/prog/pyenv_eda/bin:$PATH
+
+# Core Python libs commonly used across projects
+RUN uv pip install cocotb==1.9.2 numpy pandas pyarrow pyyaml pytest tqdm matplotlib
+
+# Optionally preinstall project requirements if provided by the build context
+ARG PYTORCH_EXTRA_INDEX_URL=""
+COPY requirements.txt requirements_extra.txt /tmp/pip/
+RUN if [ -f /tmp/pip/requirements.txt ]; then \
+      if [ -n "$PYTORCH_EXTRA_INDEX_URL" ]; then \
+        PIP_EXTRA_INDEX_URL="$PYTORCH_EXTRA_INDEX_URL" uv pip install -r /tmp/pip/requirements.txt; \
+      else \
+        uv pip install -r /tmp/pip/requirements.txt; \
+      fi; \
+    else \
+      echo "No requirements.txt found in context; skipping"; \
+    fi
+ARG INSTALL_EXTRAS="false"
+RUN if [ "$INSTALL_EXTRAS" = "true" ] && [ -f /tmp/pip/requirements_extra.txt ]; then \
+      uv pip install -r /tmp/pip/requirements_extra.txt || true; \
+    fi
+
+# Developer user
+RUN useradd -m -s /bin/bash vscode \
+ && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
+ && chmod 0440 /etc/sudoers.d/vscode \
+ && chown -R vscode:vscode /prog
+
+#########################################################
+# Verilator
+#########################################################
+RUN git clone --depth=1 https://github.com/verilator/verilator /proj/verilator \
+ && cd /proj/verilator \
+ && autoconf \
+ && ./configure \
+ && make -j ${NPROC} \
+ && make install
+
+#########################################################
+# Yosys
+#########################################################
+RUN git clone https://github.com/YosysHQ/yosys.git /proj/yosys \
+ && cd /proj/yosys \
+ && git checkout -b build_version tags/v0.53 \
+ && git submodule update --init \
+ && make config-gcc \
+ && make -j ${NPROC} \
+ && make install
+
+#########################################################
+# PULP Tool Suite (Bender, Morty, Svase) and SV2V
+#########################################################
+WORKDIR /usr/bin
+RUN curl --proto '=https' --tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | bash
+
+RUN curl -fsSLo /tmp/morty.tar.gz https://github.com/pulp-platform/morty/releases/download/v0.9.0/morty-ubuntu.22.04-x86_64.tar.gz \
+ && tar -C /tmp -xf /tmp/morty.tar.gz \
+ && install -m 0755 /tmp/morty /usr/bin/morty \
+ && rm -rf /tmp/morty*
+
+RUN git clone https://github.com/pulp-platform/svase.git /opt/svase \
+ && cd /opt/svase \
+ && git checkout -b build_version e192e39 \
+ && sed -i 's/ -Werror//g' CMakeLists.txt \
+ && make build \
+ && install -m 0755 /opt/svase/build/svase /usr/bin/svase
+
+RUN mkdir -p /opt/sv2v \
+ && cd /opt/sv2v \
+ && wget -q https://github.com/zachjs/sv2v/releases/download/v0.0.12/sv2v-Linux.zip \
+ && unzip -q sv2v-Linux.zip \
+ && install -m 0755 sv2v-Linux/sv2v /usr/bin/sv2v \
+ && rm -rf sv2v-Linux*
+
+#########################################################
+# OpenSTA and deps (CUDD + Eigen)
+#########################################################
+RUN git clone https://github.com/davidkebo/cudd /prog/cudd \
+ && cd /prog/cudd/cudd_versions \
+ && tar xfz cudd-3.0.0.tar.gz \
+ && cd /prog/cudd/cudd_versions/cudd-3.0.0 \
+ && ./configure --prefix=/prog/cudd/cudd_versions/cudd-3.0.0 \
+ && make -j ${NPROC} install
+ENV CUDD_INSTALL_DIR=/prog/cudd/cudd_versions/cudd-3.0.0
+
+RUN git clone https://gitlab.com/libeigen/eigen.git /prog/eigen \
+ && cmake -S /prog/eigen -B /prog/eigen/build_dir \
+ && cmake --install /prog/eigen/build_dir
+
+RUN git clone https://github.com/The-OpenROAD-Project/OpenSTA /prog/OpenSTA \
+ && cmake -S /prog/OpenSTA -B /prog/OpenSTA/build -DCUDD_DIR=${CUDD_INSTALL_DIR} \
+ && cmake --build /prog/OpenSTA/build -j ${NPROC}
+ENV PATH=$PATH:/prog/OpenSTA/app
+
+#########################################################
+# ASAP7 library (for example designs)
+#########################################################
+RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
+ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
+
+#########################################################
+# Polishing
+#########################################################
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+WORKDIR /app
+
+LABEL org.opencontainers.image.title="oss-eda-base" \
+      org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
+      org.opencontainers.image.source="https://github.com/<org>/oss-eda-base"
+
