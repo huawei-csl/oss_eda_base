@@ -42,22 +42,7 @@ ENV PATH=/prog/pyenv_eda/bin:$PATH
 # Core Python libs commonly used across projects
 RUN uv pip install cocotb==1.9.2 numpy pandas pyarrow pyyaml pytest tqdm matplotlib
 
-# Optionally preinstall project requirements if provided by the build context
-ARG PYTORCH_EXTRA_INDEX_URL=""
-COPY requirements.txt requirements_extra.txt /tmp/pip/
-RUN if [ -f /tmp/pip/requirements.txt ]; then \
-      if [ -n "$PYTORCH_EXTRA_INDEX_URL" ]; then \
-        PIP_EXTRA_INDEX_URL="$PYTORCH_EXTRA_INDEX_URL" uv pip install -r /tmp/pip/requirements.txt; \
-      else \
-        uv pip install -r /tmp/pip/requirements.txt; \
-      fi; \
-    else \
-      echo "No requirements.txt found in context; skipping"; \
-    fi
-ARG INSTALL_EXTRAS="false"
-RUN if [ "$INSTALL_EXTRAS" = "true" ] && [ -f /tmp/pip/requirements_extra.txt ]; then \
-      uv pip install -r /tmp/pip/requirements_extra.txt || true; \
-    fi
+## Optional requirements preinstall removed to avoid copying full context
 
 # Developer user
 RUN useradd -m -s /bin/bash vscode \
@@ -144,7 +129,15 @@ RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 WORKDIR /app
 
+#########################################################
+# Bring in OSS EDA flow scripts only (no full-context copy)
+# Provide the path relative to the build context via OEDA_PATH.
+# - In DGFE mono-repo:    OEDA_PATH=ext/oss_eda_flow_scripts
+# - In oss_eda_base repo: OEDA_PATH=oss_eda_flow_scripts
+#########################################################
+ARG OEDA_PATH=ext/oss_eda_flow_scripts
+COPY ${OEDA_PATH}/ /app/oss_eda_flow_scripts/
+
 LABEL org.opencontainers.image.title="oss-eda-base" \
       org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
       org.opencontainers.image.source="https://github.com/<org>/oss-eda-base"
-
