@@ -137,7 +137,7 @@ WORKDIR /app
 # 2) Building from a monorepo root using -f:  ext/oss_eda_base/ext/oss_eda_flow_scripts
 # If the submodule is missing, fail with a clear message.
 #########################################################
-RUN --mount=type=bind,source=.,target=/context bash -lc <<'EOS'
+RUN --mount=type=bind,source=.,target=/context <<'EOS'
 set -euo pipefail
 src=""
 if [[ -d /context/ext/oss_eda_base/ext/oss_eda_flow_scripts ]]; then
