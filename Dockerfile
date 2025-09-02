@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev libreadline-dev libffi-dev \
     graphviz xdot tcl-dev gawk \
     libboost-system-dev libboost-filesystem-dev libboost-python-dev \
-    swig perl python3 sudo \
+    swig perl python3 python3-dev sudo \
     locales \
   && rm -rf /var/lib/apt/lists/*
 
@@ -60,17 +60,22 @@ RUN git clone --depth=1 https://github.com/verilator/verilator /proj/verilator \
  && ./configure \
  && make -j ${NPROC} \
  && make install
+ENV PATH=$PATH:/prog/verilator/bin
 
 #########################################################
 # Yosys
 #########################################################
 RUN git clone https://github.com/YosysHQ/yosys.git /proj/yosys \
  && cd /proj/yosys \
- && git checkout -b build_version tags/v0.53 \
+ && git checkout -b build_version tags/v0.55 \
  && git submodule update --init \
  && make config-gcc \
  && make -j ${NPROC} \
  && make install
+RUN git clone --recursive https://github.com/povik/yosys-slang /proj/yosys/yosys-slang
+WORKDIR /proj/yosys/yosys-slang
+RUN make -j ${NPROC} && make install
+ENV PATH=$PATH:/proj/yosys/bin
 
 #########################################################
 # PULP Tool Suite (Bender, Morty, Svase) and SV2V
@@ -118,6 +123,20 @@ RUN git clone https://github.com/The-OpenROAD-Project/OpenSTA /prog/OpenSTA \
 ENV PATH=$PATH:/prog/OpenSTA/app
 
 #########################################################
+# OpenROAD Flow Scripts 
+#########################################################
+RUN git clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts /prog/OpenROAD-flow-scripts
+WORKDIR /prog/OpenROAD-flow-scripts
+RUN sed -i 's/sudo -u $SUDO_USER//g' setup.sh
+RUN ./setup.sh
+RUN apt-get update && apt-get install -y --no-install-recommends python3.12-dev python3-venv
+RUN PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    PYTHONNOUSERSITE=1 \
+    Python3_EXECUTABLE=/usr/bin/python3 \
+    ./build_openroad.sh --local
+ENV PATH=$PATH:/prog/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/
+
+#########################################################
 # ASAP7 library (for example designs)
 #########################################################
 RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
@@ -126,6 +145,7 @@ ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
 #########################################################
 # Polishing
 #########################################################
+
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 WORKDIR /app
@@ -163,4 +183,4 @@ EOS
 
 LABEL org.opencontainers.image.title="oss-eda-base" \
       org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
-      org.opencontainers.image.source="https://github.com/<org>/oss-eda-base"
+      org.opencontainers.image.source="https://github.com/MaxenceBouvier/oss-eda-base"
