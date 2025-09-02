@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev libreadline-dev libffi-dev \
     graphviz xdot tcl-dev gawk \
     libboost-system-dev libboost-filesystem-dev libboost-python-dev \
-    swig perl python3 python3-dev sudo \
+    swig perl python3 python3-dev python3.12-dev python3-venv sudo \
     locales \
   && rm -rf /var/lib/apt/lists/*
 
@@ -52,10 +52,19 @@ RUN useradd -m -s /bin/bash vscode \
  && chown -R vscode:vscode /prog
 
 #########################################################
+# ASAP7 library 
+# Done early to simplify dockerfile modifications
+#########################################################
+RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
+ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
+
+#########################################################
 # Verilator
 #########################################################
-RUN git clone --depth=1 https://github.com/verilator/verilator /proj/verilator \
+ARG VERILATOR_VER="tags/v5.036"
+RUN git clone https://github.com/verilator/verilator /proj/verilator \ 
  && cd /proj/verilator \
+ && git checkout -b build_version ${VERILATOR_VER} \
  && autoconf \
  && ./configure \
  && make -j ${NPROC} \
@@ -65,16 +74,18 @@ ENV PATH=$PATH:/prog/verilator/bin
 #########################################################
 # Yosys
 #########################################################
+ARG YOSYS_VER="tags/v0.55"
 RUN git clone https://github.com/YosysHQ/yosys.git /proj/yosys \
  && cd /proj/yosys \
- && git checkout -b build_version tags/v0.55 \
+ && git checkout -b build_version ${YOSYS_VER} \
  && git submodule update --init \
  && make config-gcc \
  && make -j ${NPROC} \
  && make install
-RUN git clone --recursive https://github.com/povik/yosys-slang /proj/yosys/yosys-slang
-WORKDIR /proj/yosys/yosys-slang
-RUN make -j ${NPROC} && make install
+RUN git clone --recursive https://github.com/povik/yosys-slang /proj/yosys/yosys-slang \
+ && cd /proj/yosys/yosys-slang \
+ && make -j ${NPROC} \
+ && make install
 ENV PATH=$PATH:/proj/yosys/bin
 
 #########################################################
@@ -127,20 +138,23 @@ ENV PATH=$PATH:/prog/OpenSTA/app
 #########################################################
 RUN git clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts /prog/OpenROAD-flow-scripts
 WORKDIR /prog/OpenROAD-flow-scripts
-RUN sed -i 's/sudo -u $SUDO_USER//g' setup.sh
-RUN ./setup.sh
-RUN apt-get update && apt-get install -y --no-install-recommends python3.12-dev python3-venv
-RUN PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+RUN sed -i 's/sudo -u $SUDO_USER//g' setup.sh \
+  && ./setup.sh \
+  && PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     PYTHONNOUSERSITE=1 \
     Python3_EXECUTABLE=/usr/bin/python3 \
     ./build_openroad.sh --local
 ENV PATH=$PATH:/prog/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/
 
 #########################################################
-# ASAP7 library (for example designs)
+# Trace 2 Power
 #########################################################
-RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
-ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN git clone https://github.com/antmicro/trace2power.git /prog/trace2power
+WORKDIR /prog/trace2power
+RUN git checkout 74949-glitch-power && cargo install --path .
+
 
 #########################################################
 # Polishing
