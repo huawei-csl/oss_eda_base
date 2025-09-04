@@ -1,6 +1,6 @@
 # oss-eda-base
 
-Shared Docker base image providing common EDA toolchain and Python env for DGFE, Flowy, and related projects. It now bakes `oss_eda_flow_scripts` into the image so overlays don’t need to vendor it.
+Shared Docker base image providing common EDA toolchain and Python env for GENIAL, Flowy, and related projects. It now bakes `oss_eda_flow_scripts` into the image so overlays don’t need to vendor it.
 
 ## Submodule Setup
 
