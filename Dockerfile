@@ -55,8 +55,8 @@ RUN useradd -m -s /bin/bash vscode \
 # ASAP7 library 
 # Done early to simplify dockerfile modifications
 #########################################################
-RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
-ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
+# RUN git clone https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git /app/asap7sc7p5t_28
+# ENV MODEL_SOURCES=/app/asap7sc7p5t_28/Verilog
 
 #########################################################
 # Verilator
@@ -136,24 +136,24 @@ ENV PATH=$PATH:/prog/OpenSTA/app
 #########################################################
 # OpenROAD Flow Scripts 
 #########################################################
-RUN git clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts /prog/OpenROAD-flow-scripts
-WORKDIR /prog/OpenROAD-flow-scripts
-RUN sed -i 's/sudo -u $SUDO_USER//g' setup.sh \
-  && ./setup.sh \
-  && PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    PYTHONNOUSERSITE=1 \
-    Python3_EXECUTABLE=/usr/bin/python3 \
-    ./build_openroad.sh --local
-ENV PATH=$PATH:/prog/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/
+# RUN git clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts /prog/OpenROAD-flow-scripts
+# WORKDIR /prog/OpenROAD-flow-scripts
+# RUN sed -i 's/sudo -u $SUDO_USER//g' setup.sh \
+#   && ./setup.sh \
+#   && PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+#     PYTHONNOUSERSITE=1 \
+#     Python3_EXECUTABLE=/usr/bin/python3 \
+#     ./build_openroad.sh --local
+# ENV PATH=$PATH:/prog/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/
 
 #########################################################
 # Trace 2 Power
 #########################################################
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN git clone https://github.com/antmicro/trace2power.git /prog/trace2power
-WORKDIR /prog/trace2power
-RUN git checkout 74949-glitch-power && cargo install --path .
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+# ENV PATH="/root/.cargo/bin:${PATH}"
+# RUN git clone https://github.com/antmicro/trace2power.git /prog/trace2power
+# WORKDIR /prog/trace2power
+# RUN git checkout 74949-glitch-power && cargo install --path .
 
 
 #########################################################
