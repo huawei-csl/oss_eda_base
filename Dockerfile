@@ -36,8 +36,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
  && install -m 0755 /root/.local/bin/uv /usr/local/bin/uv
 ENV PATH=/usr/local/bin:$PATH
 WORKDIR /prog
+# Ensure uv installs Python in a globally readable location, not under /root
+ENV UV_PYTHON_INSTALL_DIR=/prog/.uv/python \
+    XDG_CACHE_HOME=/prog/.cache
+RUN mkdir -p /prog/.uv/python /prog/.cache \
+ && chmod 0755 -R /prog/.uv /prog/.cache
 RUN uv venv -n pyenv_eda --python=3.13 \
- && echo 'export PATH="/prog/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv_eda.sh
+ && echo 'export PATH="/prog/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv_eda.sh \
+ && ln -sf /prog/pyenv_eda/bin/python /usr/local/bin/python
 ENV PATH=/prog/pyenv_eda/bin:$PATH
 
 # Core Python libs commonly used across projects
@@ -195,6 +201,16 @@ mkdir -p /app/oss_eda_flow_scripts
 cp -a "$src"/. /app/oss_eda_flow_scripts/
 EOS
 
+
+# Ensure vscode user has a writable cache for uv and friends
+RUN mkdir -p /home/vscode/.cache/uv /tmp/mplconfig \
+ && chown -R vscode:vscode /home/vscode /tmp/mplconfig
+
+# Provide a stable `python` in PATH even if only `python3` exists
+RUN ln -sf /prog/pyenv_eda/bin/python /usr/local/bin/python
+
+
 LABEL org.opencontainers.image.title="oss-eda-base" \
       org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
       org.opencontainers.image.source="https://github.com/MaxenceBouvier/oss-eda-base"
+
