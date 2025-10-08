@@ -1,0 +1,25 @@
+.git
+**/.git
+**/.gitmodules
+**/.svn
+**/.hg
+
+# Python caches and virtualenvs
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.venv
+**/venv
+**/envs
+**/pyenvs
+
+# Editors and OS junk
+**/*.swp
+**/*~
+**/.DS_Store
+
+# Large or irrelevant outputs (if any under this tree)
+**/build
+**/dist
+**/*.log
