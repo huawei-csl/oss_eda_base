@@ -53,6 +53,10 @@ ARG ORFS_REPO
 ARG NPROC
 RUN git clone --depth 1 "${ORFS_REPO}" /build/ORFS
 WORKDIR /build/ORFS
+# Fetch exactly that commit into the shallow clone and check it out
+# RUN git fetch --no-tags --depth 1 origin 9c88e25970729dcaf7af59ffd7c98c168c5a2c71 \
+#  && git checkout --detach 9c88e25970729dcaf7af59ffd7c98c168c5a2c71 \
+#  && git submodule update --init --recursive --depth 1
 RUN set -eu; \
   tmpdir="$(mktemp -d)"; trap 'rm -rf "$tmpdir"' EXIT; \
   { \
@@ -64,10 +68,10 @@ RUN set -eu; \
   cmake -S "$tmpdir" -B "$tmpdir/build" -DPython3_EXECUTABLE="$cmexe" -DPython3_FIND_STRATEGY=LOCATION -DPython3_FIND_IMPLEMENTATIONS=CPython -Werror=dev
 RUN set -eux; \
   sed -i 's/sudo -u \$SUDO_USER //g' setup.sh; \
-  ./setup.sh; \
-  ./build_openroad.sh --local; \
+  ./setup.sh;
+RUN ./build_openroad.sh --local --openroad-args "-DENABLE_TESTS=OFF"; \
   mkdir -p /opt/tools/openroad; \
-  cp -a tools/install/OpenROAD /opt/tools/openroad/;
+  cp -a tools/install/OpenROAD /opt/tools/openroad/
 
 ########## Builder: Verilator ##########
 FROM builder-base AS build-verilator
@@ -120,7 +124,11 @@ RUN git clone --depth 1 "${CUDD_REPO}" /build/cudd \
 ENV CUDD_INSTALL_DIR=/opt/deps/cudd-3.0.0
 RUN git clone --depth 1 "${EIGEN_REPO}" /build/eigen \
  && cmake -S /build/eigen -B /build/eigen/build \
- && cmake --install /build/eigen/build --prefix /opt/deps/eigen --strip
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/opt/deps/eigen \
+      -DBUILD_TESTING=OFF \
+ && cmake --build /build/eigen/build --parallel \
+ && cmake --install /build/eigen/build --strip
 RUN git clone --depth 1 "${OPENSTA_REPO}" /build/OpenSTA \
  && cmake -S /build/OpenSTA -B /build/OpenSTA/build -DCUDD_DIR=${CUDD_INSTALL_DIR} -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /build/OpenSTA/build -j "${NPROC}" \
@@ -217,6 +225,16 @@ fi
 mkdir -p /app/oss_eda_flow_scripts
 cp -a "$src"/. /app/oss_eda_flow_scripts/
 EOS
+
+# Download the abc libstatic from https://github.com/huawei-csl/mockturtle/releases/download/v0.1.0/libabc.a
+# Put it to /app/oss_eda_flow_scripts/synth/mockturtle/lib/abc_static/libabc.a
+
+RUN mkdir -p /app/oss_eda_flow_scripts/synth/mockturtle/lib/abc_static \
+ && curl -LsSf -o /app/oss_eda_flow_scripts/synth/mockturtle/lib/abc_static/libabc.a \
+  https://github.com/huawei-csl/mockturtle/releases/download/v0.1.0/libabc.a
+
+
+
 
 # --------- Locale (unchanged) ----------
 RUN locale-gen en_US.UTF-8
