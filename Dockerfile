@@ -130,8 +130,16 @@ RUN git clone https://github.com/davidkebo/cudd /prog/cudd \
  && make -j ${NPROC} install
 ENV CUDD_INSTALL_DIR=/prog/cudd/cudd_versions/cudd-3.0.0
 
+# RA: old version
+#RUN git clone https://gitlab.com/libeigen/eigen.git /prog/eigen \
+# && cmake -S /prog/eigen -B /prog/eigen/build_dir \
+# && cmake --install /prog/eigen/build_dir
+
+# RA: new version
 RUN git clone https://gitlab.com/libeigen/eigen.git /prog/eigen \
- && cmake -S /prog/eigen -B /prog/eigen/build_dir \
+ && cd /prog/eigen \
+ && git checkout 3.4.0 \
+ && cmake -S /prog/eigen -B /prog/eigen/build_dir -DEIGEN_TEST_NOQT=ON -DEIGEN_BUILD_TESTS=OFF -DEIGEN_BUILD_DOC=OFF \
  && cmake --install /prog/eigen/build_dir
 
 RUN git clone https://github.com/The-OpenROAD-Project/OpenSTA /prog/OpenSTA \
