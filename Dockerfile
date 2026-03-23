@@ -24,7 +24,7 @@
 ARG NPROC=8
 ARG VERILATOR_VER="v5.040"
 ARG YOSYS_VER="v0.55"
-ARG OPENSTA_REPO="https://github.com/The-OpenROAD-Project/OpenSTA"
+ARG OPENSTA_REPO="https://github.com/parallaxsw/OpenSTA.git"
 ARG EIGEN_REPO="https://gitlab.com/libeigen/eigen.git"
 ARG CUDD_REPO="https://github.com/davidkebo/cudd"
 ARG ORFS_REPO="https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts"
