@@ -142,7 +142,7 @@ RUN git clone https://gitlab.com/libeigen/eigen.git /prog/eigen \
  && cmake -S /prog/eigen -B /prog/eigen/build_dir -DEIGEN_TEST_NOQT=ON -DEIGEN_BUILD_TESTS=OFF -DEIGEN_BUILD_DOC=OFF \
  && cmake --install /prog/eigen/build_dir
 
-RUN git clone https://github.com/The-OpenROAD-Project/OpenSTA /prog/OpenSTA \
+RUN git clone https://github.com/parallaxsw/OpenSTA.git /prog/OpenSTA \
  && cmake -S /prog/OpenSTA -B /prog/OpenSTA/build -DCUDD_DIR=${CUDD_INSTALL_DIR} \
  && cmake --build /prog/OpenSTA/build -j ${NPROC}
 ENV PATH=$PATH:/prog/OpenSTA/app
