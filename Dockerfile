@@ -34,18 +34,29 @@ ARG NPROC=8
 #########################################################
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
  && install -m 0755 /root/.local/bin/uv /usr/local/bin/uv
-ENV PATH=/usr/local/bin:$PATH
-WORKDIR /prog
-# Ensure uv installs Python in a globally readable location, not under /root
-ENV UV_PYTHON_INSTALL_DIR=/prog/.uv/python \
-    XDG_CACHE_HOME=/prog/.cache
-RUN mkdir -p /prog/.uv/python /prog/.cache \
- && chmod 0755 -R /prog/.uv /prog/.cache
-RUN uv venv -n pyenv_eda --python=3.13 \
- && echo 'export PATH="/prog/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv_eda.sh \
- && ln -sf /prog/pyenv_eda/bin/python /usr/local/bin/python
-ENV PATH=/prog/pyenv_eda/bin:$PATH
 
+ENV PATH=/usr/local/bin:$PATH
+
+# Ensure uv installs Python and cache in predictable locations
+ENV UV_PYTHON_INSTALL_DIR=/home/vscode/.uv/python \
+    XDG_CACHE_HOME=/home/vscode/.cache
+
+RUN mkdir -p /home/vscode/.uv/python /home/vscode/.cache \
+ && chmod 0755 -R /home/vscode/.uv /home/vscode/.cache
+
+# Create venv in the location expected by downstream images
+RUN uv venv /home/vscode/pyenv_eda --python=3.13 \
+ && chown -R vscode:vscode /home/vscode/pyenv_eda
+
+# Make it available system-wide
+RUN ln -sf /home/vscode/pyenv_eda/bin/python /usr/local/bin/python \
+ && ln -sf /home/vscode/pyenv_eda/bin/python3 /usr/local/bin/python3
+
+# Ensure it is used by default
+ENV PATH=/home/vscode/pyenv_eda/bin:$PATH
+
+# Optional: persist for login shells
+RUN echo 'export PATH="/home/vscode/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv_eda.sh
 # Core Python libs commonly used across projects
 RUN uv pip install cocotb==1.9.2 numpy pandas pyarrow pyyaml pytest tqdm matplotlib
 
