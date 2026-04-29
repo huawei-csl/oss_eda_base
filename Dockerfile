@@ -44,6 +44,12 @@ ENV UV_PYTHON_INSTALL_DIR=/home/vscode/.uv/python \
 RUN mkdir -p /home/vscode/.uv/python /home/vscode/.cache \
  && chmod 0755 -R /home/vscode/.uv /home/vscode/.cache
 
+# Developer user
+RUN useradd -m -s /bin/bash vscode \
+ && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
+ && chmod 0440 /etc/sudoers.d/vscode \
+ && chown -R vscode:vscode /prog
+
 # Create venv in the location expected by downstream images
 RUN uv venv /home/vscode/pyenv_eda --python=3.13 \
  && chown -R vscode:vscode /home/vscode/pyenv_eda
@@ -61,12 +67,6 @@ RUN echo 'export PATH="/home/vscode/pyenv_eda/bin:$PATH"' > /etc/profile.d/pyenv
 RUN uv pip install cocotb==1.9.2 numpy pandas pyarrow pyyaml pytest tqdm matplotlib
 
 ## Optional requirements preinstall removed to avoid copying full context
-
-# Developer user
-RUN useradd -m -s /bin/bash vscode \
- && echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode \
- && chmod 0440 /etc/sudoers.d/vscode \
- && chown -R vscode:vscode /prog
 
 #########################################################
 # ASAP7 library 
