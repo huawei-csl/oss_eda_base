@@ -218,6 +218,7 @@ else
 fi
 mkdir -p /app/oss_eda_flow_scripts
 cp -a "$src"/. /app/oss_eda_flow_scripts/
+chown -R vscode:vscode /app/oss_eda_flow_scripts
 EOS
 
 
