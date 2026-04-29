@@ -226,8 +226,8 @@ RUN mkdir -p /home/vscode/.cache/uv /tmp/mplconfig \
  && chown -R vscode:vscode /home/vscode /tmp/mplconfig
 
 # Provide a stable `python` in PATH even if only `python3` exists
-RUN ln -sf /prog/pyenv_eda/bin/python /usr/local/bin/python
-
+RUN ln -sf /home/vscode/pyenv_eda/bin/python /usr/local/bin/python \
+ && ln -sf /home/vscode/pyenv_eda/bin/python3 /usr/local/bin/python3
 
 LABEL org.opencontainers.image.title="oss-eda-base" \
       org.opencontainers.image.description="Shared EDA base for DGFE and Flowy" \
