@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # System dependencies (no recommends)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl wget git unzip zip \
-    build-essential g++ make cmake ninja-build \
+    build-essential g++ make cmake \
     autoconf automake libtool pkg-config \
     flex bison help2man \
     numactl libgoogle-perftools-dev \
